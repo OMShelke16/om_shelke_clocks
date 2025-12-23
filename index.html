@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive 3D Time Cube</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --glow: hsl(180, 100%, 60%);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle, #020202, #000);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Orbitron', sans-serif;
+    overflow: hidden;
+}
+
+/* Scene */
+.scene {
+    width: 280px;
+    height: 280px;
+    perspective: 1400px;
+}
+
+/* Cube */
+.cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    cursor: grab;
+}
+
+/* Faces */
+.face {
+    position: absolute;
+    width: 280px;
+    height: 280px;
+    background: rgba(0, 255, 255, 0.12);
+    border: 2px solid var(--glow);
+    box-shadow: 0 0 45px var(--glow);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    user-select: none;
+    overflow: hidden;
+}
+
+/* Base text */
+.value {
+    color: var(--glow);
+    text-shadow: 0 0 30px var(--glow);
+    text-align: center;
+}
+
+/* Time values (HH MM SS) */
+.time-value {
+    font-size: 58px;
+    letter-spacing: 2px;
+    white-space: nowrap;   /* NEVER break */
+}
+
+/* Day */
+.day-value {
+    font-size: 42px;
+    letter-spacing: 2px;
+    white-space: nowrap;   /* NEVER break */
+}
+
+/* Date (auto fit) */
+.date-value {
+    font-size: 46px;
+    letter-spacing: 2px;
+    max-width: 90%;
+    line-height: 1.1;
+    white-space: normal;   /* SAFE wrap */
+}
+
+/* Labels */
+.label {
+    font-size: 14px;
+    letter-spacing: 4px;
+    margin-top: 14px;
+    color: #dfffff;
+}
+
+/* Date face layout */
+.date-face {
+    flex-direction: column;
+}
+
+/* Face positions */
+.front  { transform: translateZ(140px); }
+.back   { transform: rotateY(180deg) translateZ(140px); }
+.right  { transform: rotateY(90deg) translateZ(140px); }
+.left   { transform: rotateY(-90deg) translateZ(140px); }
+.top    { transform: rotateX(90deg) translateZ(140px); }
+.bottom { transform: rotateX(-90deg) translateZ(140px); }
+
+/* Progress ring */
+.face.bottom svg {
+    filter: drop-shadow(0 0 15px var(--glow));
+}
+</style>
+</head>
+<body>
+
+<div class="scene">
+<div class="cube" id="cube">
+
+    <!-- HOURS -->
+    <div class="face front">
+        <div>
+            <div class="value time-value" id="hours">00</div>
+            <div class="label">HOURS</div>
+        </div>
+    </div>
+
+    <!-- MINUTES -->
+    <div class="face right">
+        <div>
+            <div class="value time-value" id="minutes">00</div>
+            <div class="label">MINUTES</div>
+        </div>
+    </div>
+
+    <!-- SECONDS -->
+    <div class="face top">
+        <div>
+            <div class="value time-value" id="seconds">00</div>
+            <div class="label">SECONDS</div>
+        </div>
+    </div>
+
+    <!-- DATE -->
+    <div class="face left date-face">
+        <div class="value date-value" id="date">00-00-0000</div>
+        <div class="label">DATE</div>
+    </div>
+
+    <!-- DAY -->
+    <div class="face back">
+        <div>
+            <div class="value day-value" id="day">MONDAY</div>
+            <div class="label">DAY</div>
+        </div>
+    </div>
+
+    <!-- DAY PROGRESS -->
+    <div class="face bottom">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle cx="80" cy="80" r="65"
+                stroke="rgba(255,255,255,0.15)"
+                stroke-width="10"
+                fill="none" />
+            <circle cx="80" cy="80" r="65"
+                stroke="var(--glow)"
+                stroke-width="10"
+                fill="none"
+                stroke-linecap="round"
+                stroke-dasharray="408"
+                stroke-dashoffset="408"
+                id="progressRing" />
+        </svg>
+    </div>
+
+</div>
+</div>
+
+<script>
+/* ===== CLOCK ===== */
+function updateClock() {
+    const now = new Date();
+
+    hours.textContent   = String(now.getHours()).padStart(2, "0");
+    minutes.textContent = String(now.getMinutes()).padStart(2, "0");
+    seconds.textContent = String(now.getSeconds()).padStart(2, "0");
+
+    const dd = String(now.getDate()).padStart(2, "0");
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const yyyy = now.getFullYear();
+    date.textContent = `${dd}-${mm}-${yyyy}`;
+
+    const days = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+    day.textContent = days[now.getDay()];
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ===== DAY PROGRESS ===== */
+function updateProgressRing() {
+    const now = new Date();
+    const secondsToday =
+        now.getHours() * 3600 +
+        now.getMinutes() * 60 +
+        now.getSeconds();
+
+    progressRing.style.strokeDashoffset =
+        408 * (1 - secondsToday / 86400);
+}
+setInterval(updateProgressRing, 1000);
+updateProgressRing();
+
+/* ===== COLOR CYCLE ===== */
+let hue = 180;
+function colorCycle() {
+    hue = (hue + 0.3) % 360;
+    document.documentElement.style.setProperty(
+        "--glow", `hsl(${hue},100%,60%)`
+    );
+    requestAnimationFrame(colorCycle);
+}
+colorCycle();
+
+/* ===== ROTATION ===== */
+const cube = document.getElementById("cube");
+let baseRotX = -18, baseRotY = 0;
+let rotX = baseRotX, rotY = baseRotY;
+let autoRotate = true;
+
+function animate() {
+    if (autoRotate) {
+        baseRotY += 0.15;
+        rotX += (baseRotX - rotX) * 0.05;
+        rotY += (baseRotY - rotY) * 0.05;
+    }
+    cube.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    requestAnimationFrame(animate);
+}
+animate();
+
+/* ===== MOUSE DRAG ===== */
+let dragging = false, lastX, lastY;
+
+cube.addEventListener("mousedown", e => {
+    dragging = true;
+    autoRotate = false;
+    cube.style.cursor = "grabbing";
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+window.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    rotY += (e.clientX - lastX) * 0.4;
+    rotX -= (e.clientY - lastY) * 0.4;
+    lastX = e.clientX;
+    lastY = e.clientY;
+});
+
+window.addEventListener("mouseup", () => {
+    dragging = false;
+    autoRotate = true;
+    cube.style.cursor = "grab";
+});
+</script>
+
+</body>
+</html>
